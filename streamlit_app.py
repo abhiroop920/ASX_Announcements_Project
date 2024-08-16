@@ -1,30 +1,56 @@
 import streamlit as st
 import requests
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def fetch_announcements(ticker):
-    url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
+# List of tickers to process
+tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
+
+# Initialize Selenium WebDriver (singleton pattern)
+def init_driver():
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')  # Run in headless mode
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    
+    service = Service('/usr/local/bin/chromedriver')  # Adjust the path to your ChromeDriver
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    return driver
+
+# Use a global driver session
+driver = init_driver()
+
+# Use Selenium to visit the ASX website and extract the headers and cookies
+def get_dynamic_headers():
+    driver.get('https://www.asx.com.au/')
+    
+    # Wait for the page to load (reduce this to the minimum necessary)
+    driver.implicitly_wait(2)
+    
     headers = {
-    'Authority': 'www.asx.com.au',  # Optional, not typically needed
-    'Method': 'GET',                # Optional, not typically needed
-    'Path': '/asx/1/company/AEE/announcements?count=20&market_sensitive=false',  # Optional, not typically needed
-    'Scheme': 'https',              # Optional, not typically needed
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-    'Accept-Encoding': 'gzip, deflate, br, zstd',
-    'Accept-Language': 'en-US,en-GB;q=0.9,en;q=0.8',
-    'Cache-Control': 'max-age=0',
-    'Cookie': 'JSESSIONID=.node104; nlbi_2835827_2708396=O2ihIGFbuQ7zQ5uu2S5TNgAAAAB0R6iDxDQhA5hzOrQ2eft3; affinity="5df11493f8c25962"; nlbi_2835827=TAwVbOOQrhsFSt0f2S5TNgAAAACJME3ibkWRVtKJy+Qovxlm; visid_incap_2835827=0zBSCjuHTYy+ppDyafJC4oqWvmYAAAAAREIPAAAAAACAXGW2AWIuT/zgLd+T5qjusNPGrpy26mSp; TS019c39fc=01856a822a67aa02a595ed5cd6115b8ec6c2090d45f6d7a5ac56417b4ba74d672c7976d9d545613870f267e5c7848e20d1917302b9; incap_ses_1000_2835827=5Hq4KMJcqgq15oK01rbgDYfJv2YAAAAAjOv07G4Zw2pLZsSWCXvSsw==',
-    'Priority': 'u=0, i',
-    'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
-    'Sec-Ch-Ua-Mobile': '?0',
-    'Sec-Ch-Ua-Platform': '"macOS"',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+        'User-Agent': driver.execute_script("return navigator.userAgent;"),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'max-age=0',
+        'Upgrade-Insecure-Requests': '1',
     }
+    
+    # Get cookies and format them for the Cookie header
+    cookies = driver.get_cookies()
+    cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
+    headers['Cookie'] = cookie_header
+    
+    return headers
+
+# Fetch announcements using dynamic headers and cookies
+def fetch_announcements(ticker, headers):
+    url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
+    
     response = requests.get(url, headers=headers)
     try:
         response.raise_for_status()
@@ -32,37 +58,44 @@ def fetch_announcements(ticker):
         if data:
             announcements = data['data']
             announcements.sort(key=lambda x: datetime.strptime(x['document_release_date'], '%Y-%m-%dT%H:%M:%S%z'), reverse=True)
-            return announcements
+            return ticker, announcements
         else:
-            return None
+            return ticker, None
     except requests.exceptions.HTTPError as http_err:
-        st.error(f'HTTP error occurred for {ticker}: {http_err}')
+        return ticker, None
     except requests.exceptions.RequestException as err:
-        st.error(f'Request error occurred for {ticker}: {err}')
+        return ticker, None
     except ValueError as ve:
-        st.error(f"Failed to decode JSON from response for {ticker}: {ve}")
-    return None
+        return ticker, None
 
-# List of tickers to process
-tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
-
-# Check for 'Trading Halt' announcements
-def check_trading_halts():
+# Check for 'Trading Halt' announcements (use threading to speed up)
+def check_trading_halts(headers):
     trading_halt_tickers = []
     trading_halt_details = {}
-    for ticker in tickers:
-        announcements = fetch_announcements(ticker)
-        if announcements:
-            trading_halt_announcements = [ann for ann in announcements if 'Trading Halt' in ann.get('header', '')]
-            if trading_halt_announcements:
-                trading_halt_tickers.append(ticker)
-                trading_halt_details[ticker] = trading_halt_announcements
+    
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(fetch_announcements, ticker, headers) for ticker in tickers]
+        for future in as_completed(futures):
+            ticker, announcements = future.result()
+            if announcements:
+                trading_halt_announcements = [ann for ann in announcements if 'Trading Halt' in ann.get('header', '')]
+                if trading_halt_announcements:
+                    trading_halt_tickers.append(ticker)
+                    trading_halt_details[ticker] = trading_halt_announcements
+    
+    # Sort the tickers according to the original order in the tickers list
+    trading_halt_tickers.sort(key=lambda x: tickers.index(x))
+    
     return trading_halt_tickers, trading_halt_details
 
-# Get trading halt tickers and details
-trading_halt_tickers, trading_halt_details = check_trading_halts()
-
+# Streamlit interface
 st.title('ASX Announcements Viewer')
+
+# Get dynamic headers once and reuse them
+headers = get_dynamic_headers()
+
+# Get trading halt tickers and details
+trading_halt_tickers, trading_halt_details = check_trading_halts(headers)
 
 # Display tickers with 'Trading Halt' announcements at the top
 if trading_halt_tickers:
@@ -73,7 +106,7 @@ if trading_halt_tickers:
 ticker = st.selectbox('Select Ticker', tickers)
 
 if ticker:
-    announcements = fetch_announcements(ticker)
+    announcements = fetch_announcements(ticker, headers)[1]
     if announcements:
         if ticker in trading_halt_details:
             st.write("---")
@@ -104,3 +137,6 @@ if ticker:
             st.write("---")
     else:
         st.write(f"No announcements found for ticker {ticker}")
+
+# Ensure to quit the WebDriver when done
+driver.quit()
