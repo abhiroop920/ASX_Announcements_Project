@@ -5,9 +5,13 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import chromedriver_autoinstaller
 
 # List of tickers to process
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
+
+# Automatically install and setup ChromeDriver
+chromedriver_autoinstaller.install()
 
 # Initialize Selenium WebDriver (singleton pattern)
 def init_driver():
