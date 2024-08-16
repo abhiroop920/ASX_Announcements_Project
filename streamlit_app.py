@@ -5,26 +5,25 @@ from datetime import datetime
 def fetch_announcements(ticker):
     url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
     headers = {
-       'authority': 'www.asx.com.au',
-        'method': 'GET',
-        'path': f'/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false',
-        'scheme': 'https',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'Accept-Language': 'en-US,en-GB;q=0.9,en;q=0.8',
-        'Cache-Control': 'max-age=0',
-        'Cookie': 'JSESSIONID=.node104; nlbi_2835827_2708396=O2ihIGFbuQ7zQ5uu2S5TNgAAAAB0R6iDxDQhA5hzOrQ2eft3; visid_incap_2835827=0zBSCjuHTYy+ppDyafJC4oqWvmYAAAAAQUIPAAAAAACa4xp1D5GJb2/M17K+nwu0; affinity="5df11493f8c25962"; nlbi_2835827=TAwVbOOQrhsFSt0f2S5TNgAAAACJME3ibkWRVtKJy+Qovxlm; TS019c39fc=01856a822ac181571ba3426363d3aa7906cf2ddffb1683be55bc1f4854511db65cb530bcfb37fe7635e4f11684eccb0aa26a588802; incap_ses_1000_2835827=Msl+Zmapt1fmxFK01rbgDaqvv2YAAAAAKrggMOu3Wjv7fLxM41x5Ig==',
-        'Priority': 'u=0, i',
-        'Referer': f'https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false',
-        'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"macOS"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    'Authority': 'www.asx.com.au',  # Optional, not typically needed
+    'Method': 'GET',                # Optional, not typically needed
+    'Path': '/asx/1/company/AEE/announcements?count=20&market_sensitive=false',  # Optional, not typically needed
+    'Scheme': 'https',              # Optional, not typically needed
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br, zstd',
+    'Accept-Language': 'en-US,en-GB;q=0.9,en;q=0.8',
+    'Cache-Control': 'max-age=0',
+    'Cookie': 'JSESSIONID=.node104; nlbi_2835827_2708396=O2ihIGFbuQ7zQ5uu2S5TNgAAAAB0R6iDxDQhA5hzOrQ2eft3; affinity="5df11493f8c25962"; nlbi_2835827=TAwVbOOQrhsFSt0f2S5TNgAAAACJME3ibkWRVtKJy+Qovxlm; visid_incap_2835827=0zBSCjuHTYy+ppDyafJC4oqWvmYAAAAAREIPAAAAAACAXGW2AWIuT/zgLd+T5qjusNPGrpy26mSp; TS019c39fc=01856a822a67aa02a595ed5cd6115b8ec6c2090d45f6d7a5ac56417b4ba74d672c7976d9d545613870f267e5c7848e20d1917302b9; incap_ses_1000_2835827=5Hq4KMJcqgq15oK01rbgDYfJv2YAAAAAjOv07G4Zw2pLZsSWCXvSsw==',
+    'Priority': 'u=0, i',
+    'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
     }
     response = requests.get(url, headers=headers)
     try:
@@ -105,4 +104,3 @@ if ticker:
             st.write("---")
     else:
         st.write(f"No announcements found for ticker {ticker}")
-
