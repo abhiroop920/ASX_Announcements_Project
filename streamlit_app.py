@@ -17,7 +17,7 @@ def init_driver():
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     
-    service = Service('/usr/local/bin/chromedriver')  # Adjust the path to your ChromeDriver
+    service = Service('/usr/local/bin/chromedriver')  #Path to chromedriver
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
@@ -28,7 +28,7 @@ driver = init_driver()
 def get_dynamic_headers():
     driver.get('https://www.asx.com.au/')
     
-    # Wait for the page to load (reduce this to the minimum necessary)
+    # Wait for the page to load
     driver.implicitly_wait(2)
     
     headers = {
