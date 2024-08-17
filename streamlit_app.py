@@ -1,53 +1,70 @@
 import streamlit as st
-from playwright.sync_api import sync_playwright
+import requests
 from datetime import datetime
+from playwright.sync_api import sync_playwright
 
 # List of tickers to process
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
 
 def init_browser():
     playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=False)  # Set headless=False to see the browser
+    browser = playwright.chromium.launch(headless=True)
     context = browser.new_context()
     return context, browser
 
 context, browser = init_browser()
 
-def fetch_announcements_playwright(ticker):
+def get_dynamic_headers():
     page = context.new_page()
-    page.goto(f'https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false')
+    page.goto('https://www.asx.com.au/')
     
-    # Wait for the page to load completely
-    page.wait_for_selector("body")
+    headers = {
+        'User-Agent': page.evaluate("navigator.userAgent"),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'max-age=0',
+        'Upgrade-Insecure-Requests': '1',
+    }
+    
+    cookies = page.context.cookies()
+    cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
+    headers['Cookie'] = cookie_header
+    
+    return headers
 
-    # You might need to interact with the page if there is a CAPTCHA or other elements.
-    # For example: page.click("button#submit")
-
-    # Extract data directly from the page content
-    content = page.content()
+def fetch_announcements(ticker, headers):
+    url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
     
-    # Close the page after extracting data
-    page.close()
-    
-    # Process the content (you would need to parse it to extract the relevant JSON data)
-    # If the content is JSON, you can parse it directly
-    # Otherwise, you will have to handle the HTML accordingly.
-    # Example if content was JSON:
+    response = requests.get(url, headers=headers)
     try:
-        data = page.evaluate('JSON.parse(document.querySelector("body").innerText);')
-        announcements = data['data']
-        announcements.sort(key=lambda x: datetime.strptime(x['document_release_date'], '%Y-%m-%dT%H:%M:%S%z'), reverse=True)
-        return ticker, announcements
-    except Exception as e:
-        st.error(f"Error parsing data for ticker {ticker}: {e}")
+        response.raise_for_status()
+        data = response.json()
+        if data:
+            announcements = data['data']
+            announcements.sort(key=lambda x: datetime.strptime(x['document_release_date'], '%Y-%m-%dT%H:%M:%S%z'), reverse=True)
+            return ticker, announcements
+        else:
+            return ticker, None
+    except requests.exceptions.HTTPError as http_err:
+        st.error(f"HTTP error occurred: {http_err}")
+        st.write(f"Response Content: {response.text}")
+        return ticker, None
+    except requests.exceptions.RequestException as err:
+        st.error(f"Request error occurred: {err}")
+        st.write(f"Response Content: {response.text}")
+        return ticker, None
+    except ValueError as ve:
+        st.error(f"JSON decode error: {ve}")
+        st.write(f"Response Content: {response.text}")
         return ticker, None
 
-def check_trading_halts():
+def check_trading_halts(headers):
     trading_halt_tickers = []
     trading_halt_details = {}
     
     for ticker in tickers:
-        ticker, announcements = fetch_announcements_playwright(ticker)
+        ticker, announcements = fetch_announcements(ticker, headers)
         if announcements:
             trading_halt_announcements = [ann for ann in announcements if 'Trading Halt' in ann.get('header', '')]
             if trading_halt_announcements:
@@ -61,16 +78,22 @@ def check_trading_halts():
 # Streamlit interface
 st.title('ASX Announcements Viewer')
 
-trading_halt_tickers, trading_halt_details = check_trading_halts()
+# Get dynamic headers once and reuse them
+headers = get_dynamic_headers()
 
+# Get trading halt tickers and details
+trading_halt_tickers, trading_halt_details = check_trading_halts(headers)
+
+# Display tickers with 'Trading Halt' announcements at the top
 if trading_halt_tickers:
     st.write("**Tickers with 'Trading Halt' announcements:**")
     st.write(", ".join(trading_halt_tickers))
 
+# Dropdown menu for ticker selection
 ticker = st.selectbox('Select Ticker', tickers)
 
 if ticker:
-    announcements = fetch_announcements_playwright(ticker)[1]
+    announcements = fetch_announcements(ticker, headers)[1]
     if announcements:
         if ticker in trading_halt_details:
             st.write("---")
