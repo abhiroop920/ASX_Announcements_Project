@@ -37,7 +37,7 @@ def get_dynamic_headers():
     }
     
     cookies = page.context.cookies()
-    cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}"] for cookie in cookies)
+    cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
     headers['Cookie'] = cookie_header
     
     return headers
