@@ -3,3 +3,4 @@ requests
 selenium
 chromedriver-autoinstaller
 playwright
+chromium-browser
