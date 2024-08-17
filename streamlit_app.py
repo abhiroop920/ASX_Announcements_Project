@@ -25,25 +25,31 @@ def init_browser():
 
 context, browser = init_browser()
 
-def fetch_announcements_via_browser(ticker):
+def fetch_announcements_via_browser(ticker, retries=3, delay=2):
     page = context.new_page()
     url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
     
     page.goto(url)
     time.sleep(random.uniform(2, 5))  # Simulate a human pause
-    content = page.content()
     
-    try:
-        data = page.evaluate("JSON.parse(document.querySelector('body').innerText)")
-        if data:
-            announcements = data['data']
-            announcements.sort(key=lambda x: datetime.strptime(x['document_release_date'], '%Y-%m-%dT%H:%M:%S%z'), reverse=True)
-            return ticker, announcements
-        else:
-            return ticker, None
-    except Exception as e:
-        st.error(f"Error occurred while parsing JSON for ticker {ticker}: {e}")
-        return ticker, None
+    for attempt in range(retries):
+        try:
+            # Try to parse the JSON content
+            data = page.evaluate("JSON.parse(document.querySelector('body').innerText)")
+            if data:
+                announcements = data['data']
+                announcements.sort(key=lambda x: datetime.strptime(x['document_release_date'], '%Y-%m-%dT%H:%M:%S%z'), reverse=True)
+                return ticker, announcements
+            else:
+                return ticker, None
+        except Exception as e:
+            # If it's the last attempt, log the error
+            if attempt == retries - 1:
+                st.error(f"Error occurred while parsing JSON for ticker {ticker}: {e}")
+            else:
+                time.sleep(delay)  # Wait before retrying
+    
+    return ticker, None
 
 def check_trading_halts():
     trading_halt_tickers = []
