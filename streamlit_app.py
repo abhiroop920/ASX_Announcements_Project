@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 import time
@@ -35,18 +34,17 @@ def fetch_announcements_via_browser(ticker, retries=2, delay=1):
     for attempt in range(retries):
         try:
             # Try to parse the JSON content
-            data = page.evaluate("JSON.parse(document.querySelector('body').innerText)")
+            data = page.evaluate("try { JSON.parse(document.querySelector('body').innerText) } catch(e) { null }")
             if data:
                 announcements = data['data']
                 announcements.sort(key=lambda x: datetime.strptime(x['document_release_date'], '%Y-%m-%dT%H:%M:%S%z'), reverse=True)
                 return ticker, announcements
             else:
                 return ticker, None
-        except Exception as e:
+        except Exception:
             if attempt < retries - 1:
                 time.sleep(delay)  # Wait before retrying, if retries remain
             else:
-                st.error(f"Error occurred while parsing JSON for ticker {ticker}: {e}")
                 return ticker, None
 
     return ticker, None
