@@ -4,6 +4,8 @@ from datetime import datetime
 from playwright.sync_api import sync_playwright
 import time
 import random
+import os
+import subprocess
 
 # Ensure Playwright browsers are installed
 def install_playwright_browsers():
