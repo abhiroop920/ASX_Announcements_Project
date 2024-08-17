@@ -25,12 +25,12 @@ def init_browser():
 
 context, browser = init_browser()
 
-def fetch_announcements_via_browser(ticker, retries=3, delay=2):
+def fetch_announcements_via_browser(ticker, retries=2, delay=1):
     page = context.new_page()
     url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
     
     page.goto(url)
-    time.sleep(random.uniform(2, 5))  # Simulate a human pause
+    time.sleep(random.uniform(1, 3))  # Reduce human pause simulation for better performance
     
     for attempt in range(retries):
         try:
@@ -43,12 +43,12 @@ def fetch_announcements_via_browser(ticker, retries=3, delay=2):
             else:
                 return ticker, None
         except Exception as e:
-            # If it's the last attempt, log the error
-            if attempt == retries - 1:
-                st.error(f"Error occurred while parsing JSON for ticker {ticker}: {e}")
+            if attempt < retries - 1:
+                time.sleep(delay)  # Wait before retrying, if retries remain
             else:
-                time.sleep(delay)  # Wait before retrying
-    
+                st.error(f"Error occurred while parsing JSON for ticker {ticker}: {e}")
+                return ticker, None
+
     return ticker, None
 
 def check_trading_halts():
