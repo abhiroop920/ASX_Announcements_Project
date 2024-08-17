@@ -2,6 +2,15 @@ import streamlit as st
 import requests
 from datetime import datetime
 from playwright.sync_api import sync_playwright
+import os
+import subprocess
+
+# Ensure Playwright browsers are installed
+def install_playwright_browsers():
+    if not os.path.exists("/home/appuser/.cache/ms-playwright"):
+        subprocess.run(["playwright", "install", "chromium"])
+
+install_playwright_browsers()
 
 # List of tickers to process
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
@@ -28,7 +37,7 @@ def get_dynamic_headers():
     }
     
     cookies = page.context.cookies()
-    cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
+    cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}"] for cookie in cookies)
     headers['Cookie'] = cookie_header
     
     return headers
