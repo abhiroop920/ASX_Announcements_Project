@@ -5,6 +5,9 @@ from playwright.sync_api import sync_playwright
 import subprocess
 import sys
 
+# Ensure Playwright system dependencies are installed
+subprocess.run(["sudo", "playwright", "install-deps"])
+
 # Ensure Playwright browsers are installed
 subprocess.run([sys.executable, "-m", "playwright", "install"])
 
