@@ -56,12 +56,15 @@ def fetch_announcements(ticker, headers):
             return ticker, None
     except requests.exceptions.HTTPError as http_err:
         st.error(f"HTTP error occurred: {http_err}")
+        st.write(f"Response Content: {response.text}")
         return ticker, None
     except requests.exceptions.RequestException as err:
         st.error(f"Request error occurred: {err}")
+        st.write(f"Response Content: {response.text}")
         return ticker, None
     except ValueError as ve:
         st.error(f"JSON decode error: {ve}")
+        st.write(f"Response Content: {response.text}")
         return ticker, None
 
 def check_trading_halts(headers):
