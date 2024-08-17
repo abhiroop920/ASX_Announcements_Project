@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
 
 
-
+subprocess.run([sys.executable, "-m", "playwright", "install"])
 # Initialize Playwright and browser
 
 def init_browser():
