@@ -2,6 +2,11 @@ import streamlit as st
 import requests
 from datetime import datetime
 from playwright.sync_api import sync_playwright
+import subprocess
+import sys
+
+# Ensure Playwright browsers are installed
+subprocess.run([sys.executable, "-m", "playwright", "install"])
 
 # List of tickers to process
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
