@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import chromedriver_autoinstaller
+import os
 
 # List of tickers to process
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
@@ -21,8 +22,8 @@ def init_driver():
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     
-    service = Service('/usr/local/bin/chromedriver')  #Path to chromedriver
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    chrome_options.binary_location = "/usr/bin/chromium-browser"# Initialize WebDriver
+    driver = webdriver.Chrome(options=chrome_options)
     return driver
 
 # Use a global driver session
