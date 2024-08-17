@@ -1,50 +1,46 @@
 import streamlit as st
 import requests
 from datetime import datetime
-from playwright.sync_api import sync_playwright
-import os
-import subprocess
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+import chromedriver_autoinstaller
 
-# Ensure Playwright browsers are installed
-def install_playwright_browsers():
-    if not os.path.exists("/home/appuser/.cache/ms-playwright"):
-        subprocess.run(["playwright", "install", "chromium"])
+# Automatically install and setup ChromeDriver
+chromedriver_autoinstaller.install()
 
-install_playwright_browsers()
+# Initialize Selenium WebDriver
+def init_driver():
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')  # Run in headless mode
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
+driver = init_driver()
 
 # List of tickers to process
 tickers = ["AEE", "REZ", "1AE", "IMC", "NRZ"]
 
-def init_browser():
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=True)
-    context = browser.new_context()
-    return context, browser
-
-context, browser = init_browser()
-
 def get_dynamic_headers():
-    page = context.new_page()
-    page.goto('https://www.asx.com.au/')
-    
+    driver.get('https://www.asx.com.au/')
     headers = {
-        'User-Agent': page.evaluate("navigator.userAgent"),
+        'User-Agent': driver.execute_script("return navigator.userAgent;"),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Encoding': 'gzip, deflate, br, zstd',
         'Accept-Language': 'en-US,en;q=0.9',
         'Cache-Control': 'max-age=0',
         'Upgrade-Insecure-Requests': '1',
     }
-    
-    cookies = page.context.cookies()
+    cookies = driver.get_cookies()
     cookie_header = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
     headers['Cookie'] = cookie_header
-    
     return headers
 
 def fetch_announcements(ticker, headers):
     url = f"https://www.asx.com.au/asx/1/company/{ticker}/announcements?count=20&market_sensitive=false"
-    
     response = requests.get(url, headers=headers)
     try:
         response.raise_for_status()
@@ -135,4 +131,4 @@ if ticker:
         st.write(f"No announcements found for ticker {ticker}")
 
 # Ensure to close the browser when done
-browser.close()
+driver.quit()
